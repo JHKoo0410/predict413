@@ -1,7 +1,13 @@
 Artifacts from completing Northwestern University Predict 413
 =============================================================
 
-    The objective of this course is to cover key analytical techniques used in the analysis and forecasting of time series data. Specific topics include the role of forecasting in organizations, exponential smoothing methods, stationary and non-stationary time series, autocorrelation and partial autocorrelation functions, Univariate ARIMA models, seasonal models, Box-Jenkins methodology, Regression Models with ARIMA errors, Transfer Function modeling, Intervention Analysis, and multivariate time series analysis.
+    The objective of this course is to cover key analytical techniques used in
+    the analysis and forecasting of time series data. Specific topics include
+    the role of forecasting in organizations, exponential smoothing methods,
+    stationary and non-stationary time series, autocorrelation and partial
+    autocorrelation functions, Univariate ARIMA models, seasonal models, Box-
+    Jenkins methodology, Regression Models with ARIMA errors, Transfer Function
+    modeling, Intervention Analysis, and multivariate time series analysis.
 
 I'm sharing artifacts from my completion of the course with the intent that
 someone may benefit from the approach taken. I'm sharing everything that I think
