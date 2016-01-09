@@ -11,3 +11,8 @@ The course tought by professor [Holt](mailto:ginger.koev@northwestern.edu) will 
     sudo dnf install rstudio-0.99.491-x86_64.rpm
 
 From here you will be able to use R-studio to install packages from [CRAN](https://cran.r-project.org/).
+
+The Libraries used in the course are:
+
+ - [quantmod](http://www.quantmod.com/)
+ - [fbasics](https://www.rmetrics.org/)
