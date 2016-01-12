@@ -1,6 +1,9 @@
-% Assignment 1: Forecasting / Financial Data -- Fundamental Concepts
-% Andrew G. Dunn^1^
-% ^1^andrew.g.dunn@u.northwestern.edu
+---
+title: 'Assignment 1: Forecasting / Financial Data -- Fundamental Concepts'
+author: "Andrew G. Dunn"
+date: "January 11, 2016"
+output: pdf_document
+---
 
 \vfill
 
@@ -8,7 +11,7 @@
 
 Prepared for PREDICT-413: Time Series Analysis and Forecasting.
 
-Formatted using the \LaTeX\, references managed using pandoc-citeproc.
+Formatted using the \LaTeX\, via pandoc and R Markdown. References managed using pandoc-citeproc.
 
 \newpage
 
@@ -42,7 +45,7 @@ Construct a 95% confidence interval for the monthly log returns of GR stock.
 
 ## Part B
 
-Test $H_0 : m_3 = 0$ versus $H_a : m_3 != 0$, where $m_3$ denotes the skewness of the return.
+Test $H_0 : m_3 = 0$ versus $H_a : m_3 \neq 0$, where $m_3$ denotes the skewness of the return.
 
 ## Part C
 
@@ -50,7 +53,7 @@ Test $H_0 : K = 3$ versus $H_a : K != 3$, where $K$ denotes the kurtosis.
 
 # Part 3
 
-For this, ues the monthly Australian short-term overseas visitors data from May 1985 to April 2005 from `Forecasting: principles and practice` the Hyndeman and Athana­sopou­los text.
+For this, use the monthly Australian short-term overseas visitors data from May 1985 to April 2005 from `Forecasting: principles and practice` the Hyndeman and Athanasopoulos text.
 
 # Part A
 
