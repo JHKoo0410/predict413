@@ -1,0 +1,292 @@
+---
+title: 'Assignment 2: Time Series Analysis -- Fundamental Concepts'
+author: "Andrew G. Dunn"
+date: "January 21, 2016"
+bibliography: bibliography.bib
+output: pdf_document
+---
+
+\vfill
+
+**Andrew G. Dunn, Northwestern University Predictive Analytics Program**
+
+Prepared for PREDICT-413: Time Series Analysis and Forecasting.
+
+Formatted using the \LaTeX\, via pandoc and R Markdown. References managed using pandoc-citeproc.
+
+\newpage
+
+# Setup
+
+```{r message=FALSE}
+require(fBasics)    # for calculations 
+require(fpp)        # for data 
+require(knitr)      # for table output
+require(ggplot2)    # for graphing
+require(ggthemes)   # for graphing beautifully
+require(gridExtra)  # for laying out graphs
+```
+
+
+# Part 1
+
+Consider the monthly returns for General Electric (GE) stock, Center for Research In Security Prices (CRSP) value-weighted intex (VW), CRSP equal-weighted index (EW), and S&P composite index (SP) from January 1981 to December 2013. The returns include dividend distributions. Data file is `m-ge3dx8113.txt` with column names permno of GE, date, ge, vwretd, ewretd, and sprtrn, respectively.
+
+
+```{r}
+d1 = read.table("data/m-ge3dx8113.txt", header=T)
+head(d1)
+```
+
+## Part A
+
+Compute the sample mean, standard deviation, skewness, excess kurtosis, minimum, and maximum of each simple return series.
+
+```{r}
+d1a_stats = basicStats(d1)
+kable(d1a_stats[c('Mean', 'Stdev', 'Skewness', 'Kurtosis', 'Minimum', 'Maximum'), -(1:2)], 
+      caption='Basic Statistics of the Simple Return Series')
+```
+
+## Part B
+
+Transform the simple returns to log returns. Compute the sample mean, standard deviation, skewness, excess kurtosis, minimum, and maximum of each log return series.
+
+```{r}
+d1b = log(d1[,-(1:2)]+1)  # Log Transform, +1 as an offset so that we don't compute log(0)
+d1b_stats=ts = basicStats(d1b)
+kable(d1b_stats[c('Mean', 'Stdev', 'Skewness', 'Kurtosis', 'Minimum', 'Maximum'),], 
+      caption='Basic Statistics of the Log Transformed Simple Return Series')
+```
+
+## Part C
+
+Test the null hypothesis that the mean of the log returns of GE stock is zero.
+
+```{r}
+t.test(d1b$ge)
+```
+
+Reject the null hypothesis that the mean of the log return of GE stock is zero at the 0.05 level, based on p-value.
+
+## Part D
+
+Obtain the empirical density plot of the daily log returns of GE stock and the S&P composite index.
+
+```{r}
+pge = ggplot(d1b, aes(ge)) + 
+  stat_density(alpha = 0.4) + 
+  labs(x="Returns", y="Density") + 
+  ggtitle("GE") + theme_fivethirtyeight()
+
+psprtrn = ggplot(d1b, aes(sprtrn)) + 
+  stat_density(alpha = 0.4) +
+  labs(x="Returns", y="Density") + 
+  ggtitle("S&P") + theme_fivethirtyeight()
+
+grid.arrange(pge, psprtrn, ncol=2)
+
+```
+
+\newpage
+
+# Part 2
+
+Consider the daily log returns of Netflix stock from January 2, 2009 to December 31, 2013 as in Problem 1, Assignment 1. Perform the following tests:
+
+```{r}
+d2 = read.table("data/d-nflx3dx0913.txt", header=T)
+head(d2)
+```
+
+## Part A
+
+Test the null hypothesis that the log return is symmetric with respect to its mean;
+
+```{r}
+d2l = log(d2[,-(1:2)] + 1)  # Log Transform, +1 as an offset so that we don't compute log(0)
+st = skewness(d2l$nflx) / sqrt(6 / length(d2l$nflx))  # compute skewness test
+print(paste("Skewness Statistic: ", st))
+```
+
+```{r}
+p_st = 2 * (1 - pnorm(abs(st)))  # computing the p-value
+print(paste("p-value: ", p_st))
+```
+
+Test $H_0: M_3 = 0$ versus $H_a: M_3 \neq 0$, where $M_3$ denotes the skewness of the return. Reject the null hypothesis at a 0.05 level based on p-value.
+
+
+## Part B
+
+Test the null hypothesis that the excess kurtosis of the returns is zero;
+
+Test $H_0 : K = 3$ versus $H_a : K != 3$, where $K$ denotes the kurtosis.
+
+```{r}
+kt = kurtosis(d2l$nflx) / sqrt(24 / length(d2l$nflx))  # compute kurtosis test
+print(paste("Kurtosis Statistic: ", kt))
+```
+
+```{r}
+p_kt = 2 * (1 - pnorm(abs(kt)))
+print(paste("p-value: ", p_kt))
+```
+
+Reject null hypothesis at a 0.05 level.
+
+## Part C
+
+Construct a 95% confidence interval for the expected daily log return of Netflix stock.
+
+```{r}
+t_test = t.test(d2l$nflx)
+print(paste("Confidence Interval, Confidence Level 95%: ", t_test[4]))
+```
+
+\newpage
+
+# Part 3
+
+For this exercise, use the quarterly UK passenger vehicle production data from 1997:1 to 2005:1 (data set ukcars) from the Hyndeman text.
+
+```{r}
+d3 = window(ukcars, start=1997)
+```
+
+
+## Part A
+
+Plot the data and describe the main features of the series.
+
+```{r}
+plot(d3, type="o", xlab = "Years", ylab = "UK Car Production (In Thousands)")
+```
+
+The plot indicates the presence of seasonality. It appears that Q3 would be the yearly low, aside from 2002 where the fourth quarter is lower than the third.
+
+
+## Part B
+
+Decompose the series using STL and obtain the seasonally adjusted data.
+
+```{r}
+fit_stl = stl(d3, s.window = "periodic")
+plot(fit_stl)
+```
+
+The plot indicates that the seasonal fluctuations do not vary with the level of the time series. The smoothed trend plot indicates a gradual up-trend until just before 2000, with a steep down-trend starting around 2000, then a gradual up-trend starting around 2001.
+
+```{r}
+seas_adj = seasadj(fit_stl)
+seas_factors = fit_stl$time.series[2:11, "seasonal"]  # Acquire the seasonal Factors
+```
+
+\newpage
+
+## Part C
+
+Forecast the next two years of the series using an additive damped trend method applied to the seasonally adjusted data. Then reseasonalize the forecasts. Record the parameters of the method and report the RMSE of the one-step forecasts from your method.
+
+```{r}
+fit_damped_seas_adj = holt(seas_adj, damped = TRUE)
+print(fit_damped_seas_adj)
+```
+
+```{r}
+plot(fit_damped_seas_adj, xlab = "Years", ylab = "UK Car Production (In Thousands)")
+```
+
+```{r}
+print(fit_damped_seas_adj$model)
+```
+
+```{r}
+print(accuracy(fit_damped_seas_adj))
+```
+
+```{r}
+resea_fit_damed_seas_adj = fit_damped_seas_adj$mean + seas_factors   # reseasonalize the forecasted data
+```
+
+```{r}
+plot(d3, type = "o", xlab = "Years", ylab = "UK Car Production (In Thousands)", xlim = c(1997, 2008))
+lines(resea_fit_damed_seas_adj, type = "o", col = "blue")
+```
+
+\newpage
+
+## Part D
+
+Forecast the next two years of the series using Holt's linear method applied to the seasonally adjusted data. Then reseasonalize the forecasts. Record the parameters of the method and report the RMSE of the one-step forecasts from your method.
+
+```{r}
+fit_linear = holt(seas_adj)
+print(fit_linear)
+```
+
+```{r}
+plot(fit_linear, xlab = "Years", ylab = "UK Car Production (In Thousands)")
+```
+
+```{r}
+print(fit_linear$model)
+```
+
+```{r}
+print(accuracy(fit_linear))
+```
+
+```{r}
+resea_linear = fit_linear$mean + seas_factors
+plot(d3, type = "o", xlab = "Years", ylab = "UK Car Production (In Thousands)", xlim = c(1997, 2008))
+lines(resea_linear, type = "o", col = "blue")
+```
+
+\newpage
+
+## Part E
+
+Now use ETS to choose a seasonal model for the data.
+
+```{r}
+fit_ets = ets(d3, model = "ZZZ")
+print(fit_ets)
+```
+
+```{r}
+plot(forecast(fit_ets), xlab = "Years", ylab = "UK Car Production (In Thousands)")
+```
+
+```{r}
+print(accuracy(fit_ets))
+```
+
+## Part F
+
+Compare the RMSE of the fitted model with the RMSE of the model you obtained using an STL decomposition with Holt's method. Which gives the better in-sample fits?
+
+```{r}
+print(paste("Additive-Damped Model RMSE: ", accuracy(fit_damped_seas_adj)[2]))
+print(paste("Holt Model RMSE: ", accuracy(fit_linear)[2]))
+print(paste("ETS Model RMSE: ", accuracy(fit_ets)[2]))
+```
+
+The ETS model had the lowest RMSE.
+
+## Part G
+
+Compare the forecasts from the two approaches? Which seems most reasonable?
+
+The ETS model seems to be the most reasonable, showing a continuation of the most recent observed trends. We can see, if we compare side by side that both Holt Models show abrupt discontinuation of the recent observed trends.
+
+```{r}
+par(mfrow = c(3,1))
+p_damped = plot(forecast(fit_damped_seas_adj), type = "o", xlab = "Years", ylab = "Production")
+p_linear = plot(forecast(fit_linear), type = "o", xlab = "Years", ylab = "Production")
+p_ets = plot(forecast(fit_ets), type = "o", xlab = "Years", ylab = "Production")
+
+
+```
+
+

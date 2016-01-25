@@ -2,6 +2,7 @@
 title: 'Assignment 1: Forecasting / Financial Data -- Fundamental Concepts'
 author: "Andrew G. Dunn"
 date: "January 11, 2016"
+bibliography: bibliography.bib
 output: pdf_document
 ---
 
@@ -15,82 +16,305 @@ Formatted using the \LaTeX\, via pandoc and R Markdown. References managed using
 
 \newpage
 
+# Setup
+
+```{r message=FALSE}
+require(fBasics)    # for calculations 
+require(quantmod)   # for returns calculations
+require(fpp)        # for data 
+require(knitr)      # for table output
+require(ggplot2)    # for graphing
+require(ggthemes)   # for graphing beautifully
+require(gridExtra)  # for laying out graphs
+```
+
+
 # Part 1
 
-Consider the daily simple returns of Netflix (NFLX) stock, Center for Research In Security Prices (CRSP) value-weighted index (VW), CRSP equal-weighted index (EW), and the S&P composite index (SP) from January 2, 2009 to December 31, 2013. Returns of the three indices include dividends. The data are within the file `d-nflx3dx0913.txt` and the columns show permno, date, nflx, vw, ew, and sp, respectively, with the last for columns showiing the simple returns.
+Consider the daily simple returns of Netflix (NFLX) stock, Center for Research In Security Prices (CRSP) value-weighted index (VW), CRSP equal-weighted index (EW), and the S&P composite index (SP) from January 2, 2009 to December 31, 2013. Returns of the three indices include dividends. The data are within the file `d-nflx3dx0913.txt` and the columns show permno, date, nflx, vw, ew, and sp, respectively, with the last for columns showing the simple returns.
+
+```{r}
+d1 = read.table("data/d-nflx3dx0913.txt", header=T)
+head(d1)
+```
 
 ## Part A
 
-Computer the sample mean, standard deviation, skewness, excess kurtosis, minimum, and maximum of each simple return series.
+Compute the sample mean, standard deviation, skewness, excess kurtosis, minimum, and maximum of each simple return series.
+
+```{r}
+d1b = basicStats(d1)
+kable(d1b[c('Mean', 'Stdev', 'Skewness', 'Kurtosis', 'Minimum', 'Maximum'), -(1:2)], 
+      caption='Basic Statistics of the Simple Return Series')
+```
 
 ## Part B
 
 Transform the simple return to log returns. Compute the sample mean, standard deviation, skewness, excess kurtosis, minimum, and maximum of each log return series.
 
+```{r}
+d1l = log(d1[,-(1:2)]+1)  # Log Transform, +1 as an offset so that we don't compute log(0)
+d1bl = basicStats(d1l)
+kable(d1bl[c('Mean', 'Stdev', 'Skewness', 'Kurtosis', 'Minimum', 'Maximum'),], 
+      caption='Basic Statistics of the Log Transformed Simple Return Series')
+```
+
+
 ## Part C
 
 Test the null hypothesis that the mean of the log returns of NFLX stock is zero.
+
+```{r}
+t.test(d1l$nflx)
+```
+
+Fail to reject the null hypothesis at a 0.05 level.
+
+\newpage
 
 ## Part D
 
 Obtain the empirical density plot of the daily log returns of Netflix stock and the S&P composite index.
 
+```{r}
+pnflx = ggplot(d1l, aes(nflx)) + 
+  stat_density(alpha = 0.4) + 
+  labs(x="Returns", y="Density") + 
+  ggtitle("Netflix") + theme_fivethirtyeight()
+
+psprtrn = ggplot(d1l, aes(sprtrn)) + 
+  stat_density(alpha = 0.4) +
+  labs(x="Returns", y="Density") + 
+  ggtitle("S&P") + theme_fivethirtyeight()
+
+grid.arrange(pnflx, psprtrn, ncol=2)
+
+```
+
+\newpage
+
 # Part 2
 
 Consider the monthly log returns of General Electric (GE) stock from January 1981 to December 2013. The original data are monthly returns for GE stock, CRSP value-weighted index (VW), CRSP equal-weighted index (EW), and S&P composite index (SP) from January 1981 to December 2013. The returns include dividend distributions. The data are within the file `m-ge3dx8113.txt` and the columns show permno, date, ge, vwretd, ewretd, and sprtrn, respectively. Perform tests and draw conclusions using the 5% significance level.
 
+```{r}
+d2 = read.table("data/m-ge3dx8113.txt", header=T)
+head(d2)
+```
+
 ## Part A
 
-Construct a 95% confidence interval for the monthly log returns of GR stock.
+Construct a 95% confidence interval for the monthly log returns of GE stock.
+
+```{r}
+# This seems the be the way that is presented in the example code
+d2l = log(d2[,-(1:2)]+1)  # Log Transform, +1 as an offset so that we don't compute log(0)
+t.test(d2l$ge)
+```
+
+Per the t test output above, a 95% cofidence interval is (0.003248467,0.017365132)
 
 ## Part B
 
 Test $H_0 : m_3 = 0$ versus $H_a : m_3 \neq 0$, where $m_3$ denotes the skewness of the return.
 
+Test algorithm found on page 26.
+
+```{r}
+st = skewness(d2l$ge) / sqrt(6 / length(d2l$ge))  # compute skewness test
+paste(2*(1-pnorm(abs(st))))  # computing the p-value
+```
+
+Fail to reject the Null of Symmetry
+
 ## Part C
 
 Test $H_0 : K = 3$ versus $H_a : K != 3$, where $K$ denotes the kurtosis.
+
+```{r}
+kt = kurtosis(d2l$ge) / sqrt(24 / length(d2l$ge))  # compute kurtosis test
+paste(2*(1-pnorm(abs(kt))))
+```
+
+Reject null hypothesis at a 0.05 level.
+
+\newpage
 
 # Part 3
 
 For this, use the monthly Australian short-term overseas visitors data from May 1985 to April 2005 from `Forecasting: principles and practice` the Hyndeman and Athanasopoulos text.
 
+```{r}
+ts.visitors = visitors  # comes from fpp package
+df.visitors = as.data.frame(visitors)
+```
+
+
 # Part A
 
 Make a time plot of your data and describe the main features of the series.
+
+```{r}
+plot(ts.visitors)
+```
+
+The series appears to have an upward trend and a monthly seasonal component. The series appears to peak around Feb or March of each year.
 
 # Part B
 
 Forecast the next two years using Holt-Winters' multiplicative method.
 
+```{r}
+aust = window(visitors)
+fit_multi = hw(aust, seasonal="multiplicative")
+print(fit_multi)
+```
+
 # Part C
 
 Why is multiplicative seasonality necessary here?
+
+Multiplicative method is preferred when the seasonal variations are changing proportionally to the level of the series. In this series, it appears that the variations are growing.
 
 # Part D
 
 Experiment with making the trend exponential and/or damped.
 
+```{r}
+fit_multi_damped = hw(aust, seasonal="multiplicative", damped=TRUE)
+plot(forecast(fit_multi_damped))
+```
+
+```{r}
+fit_multi_exp = hw(aust, seasonal="multiplicative", exponential=TRUE)
+plot(forecast(fit_multi_exp))
+```
+
+```{r}
+fit_multi_exp_damped = hw(aust, seasonal="multiplicative", exponential=TRUE, damped=TRUE)
+plot(forecast(fit_multi_exp_damped))
+```
+
 # Part E
 
 Compare the RMSE of the one-step forecasts from the various methods. Which is preferred?
+
+```{r}
+accuracy(fit_multi)
+```
+```{r}
+accuracy(fit_multi_damped)
+```
+```{r}
+accuracy(fit_multi_exp)
+```
+```{r}
+accuracy(fit_multi_exp_damped)
+```
+
+It appears that the lowest RMSE was within tthe Multiplicative and Damped model, which fit the data best.
 
 # Part F
 
 Fit each of the following models to the same data, examine the residual diagnostics and compare the forecasts for the next two years:
 
-    Multiplicative Holt-Winters' Method
+## Multiplicative Holt-Winters' Method
 
-    ETS models
+```{r}
+fit_multi = hw(aust, multiplicative=TRUE)
+plot(fit_multi)
+```
 
-    Additive ETS model applied to a Box-Cox transformed Series
+```{r}
+hist(residuals(fit_multi), nclass=20)
+```
 
-    Seasonal naive method applied to the Box-Cox transformed series
+```{r}
+plot(residuals(fit_multi))
+```
 
-    STL decomposition applied to the Box-Cox transformed data
+```{r}
+accuracy(fit_multi)
+```
 
-    ETS model applied to the seasonally adjusted (transformed) data
+## an ETS Model
+
+```{r}
+fit_mam = ets(visitors, model="ZZZ")
+plot(forecast(fit_mam))
+```
+
+```{r}
+hist(residuals(fit_mam), nclass=20)
+```
+
+```{r}
+plot(residuals(fit_mam))
+```
+
+```{r}
+accuracy(fit_mam)
+```
+
+## Additive ETS model applied to a Box-Cox transformed Series
+
+```{r}
+fit_ana_box = ets(visitors, additive.only = TRUE, lambda = TRUE)
+plot(forecast(fit_ana_box))
+```
+
+```{r}
+hist(residuals(fit_ana_box), nclass=20)
+```
+
+```{r}
+plot(residuals(fit_ana_box))
+```
+
+```{r}
+accuracy(fit_ana_box)
+```
+
+## Seasonal naive method applied to the Box-Cox transformed series
+
+```{r}
+fit_naive = snaive(visitors, lambda = TRUE)
+plot(forecast(fit_naive))
+```
+
+```{r}
+hist(residuals(fit_naive), nclass=20)
+```
+
+```{r}
+plot(residuals(fit_naive))
+```
+
+```{r}
+accuracy(fit_naive)
+```
+
+## STL decomposition applied to the Box-Cox transformed data followed by an ETS model applied to the seasonally adjusted (transformed) data
+
+```{r}
+fit_stld = stlf(visitors, method = "ets", lambda = TRUE)
+plot(forecast(fit_stld))
+```
+
+```{r}
+hist(residuals(fit_stld), nclass=20)
+```
+
+```{r}
+plot(residuals(fit_stld))
+```
+
+```{r}
+accuracy(fit_stld)
+```
 
 # Part G
 
-Which model from above do you prefer
+Which model from above do you prefer:
+
+Looking through the forecasts, I'd rule out model 3 and 4 as the growth does not seem to match the upward trend. The residuals on the naive model in particular do not look normal or random. Although the RSME fit is best for the last model, the residual pattern does not look random (exhibits heteroschedascity). Therefore, I would choose the second model (ETS MAM) as it looks like the best balance of forecast quality, RMSE score, and no apparent issues in the residual diagnostics.

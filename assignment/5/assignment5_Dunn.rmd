@@ -1,0 +1,32 @@
+---
+title: 'Assignment 5: Nonstationary Univariate ARMA Models'
+author: "Andrew G. Dunn"
+date: "January 25, 2016"
+bibliography: bibliography.bib
+output: pdf_document
+---
+
+\vfill
+
+**Andrew G. Dunn, Northwestern University Predictive Analytics Program**
+
+Prepared for PREDICT-413: Time Series Analysis and Forecasting.
+
+Formatted using the \LaTeX\, via pandoc and R Markdown. References managed using pandoc-citeproc.
+
+\newpage
+
+# Setup
+
+```{r message=FALSE}
+require(fBasics)    # for calculations 
+require(fpp)        # for data 
+require(knitr)      # for table output
+require(ggplot2)    # for graphing
+require(ggthemes)   # for graphing beautifully
+require(gridExtra)  # for laying out graphs
+```
+
+
+# Part 1
+
