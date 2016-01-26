@@ -30,3 +30,279 @@ require(gridExtra)  # for laying out graphs
 
 # Part 1
 
+Consider the monthly series of Consumer Sentiment of the University of Michigan. This survey series is widely used to indicate the consumer confidence about the U.S. economy. The data are available from FRED of the Federal Reserve Bank of St. Louis and also in the file `m-umcsent.txt`. The sample period is from January 1978 to August 2013.
+
+```{r}
+d1 = read.table("data/m-umcsent.txt", header=T)
+head(d1)
+```
+
+\newpage
+
+## Part A
+
+Plot the consumer monthly sentiment series:
+
+```{r}
+consent = d1$VALUE
+tdx = d1[,1] + d1[,2] / 12  # assemble the time axis
+plot(tdx, consent, xlab = "year", ylab = "Sentiment", type = "l", main = "U of M Consumer Sentiment")
+```
+
+\newpage
+
+We can see a meandering trend in sentiment. We know that the datas are recoreded at monthly intervals so we will perform an STL decomposition to investigate our suspicion that this data has a seasonal component.
+
+```{r}
+a <- consent
+a.ts <- ts(a, frequency = 12)
+consent_stl = stl(a.ts, s.window="periodic")
+plot(consent_stl)
+```
+
+We see a seasonal component, however with this decomposition we are able to notice more distinctly the meandering of the trend.
+
+\newpage
+
+## Part B
+
+Is there a unit root in the monthly sentiment series? Why?:
+
+We will use the Augumented Dickey-Fuller Test, which computes the Augmented Dickey-Fuller test for the null that the time series has a unit root:
+```{r}
+adf.test(consent)
+```
+
+Which, due to the p-value of `0.5306` meaning we fail to reject the null hypthothesis. This provides us with strong indication that the timeseries is non-stationary. 
+
+```{r}
+tsdisplay(consent, main = "U of M Consumer Sentiment")
+```
+
+We're seeing what we think is an AR(1) process, because we see a large spike at the first lag, but we don't see any more significant spikes beyond the first lag. Where as, if we saw a second large spike at the second lag it would be an indicator of an AR(2) process.
+
+This also means we're not seeing a series that is stationary, as we'd expect to see the PACF graph not have any particular spikes. We should consider performing a first order differencing of the series.
+
+\newpage
+
+## Part C
+
+Consider the change series of the sentiment, (i.e. the first differenced data). Test the hypothesis that the expected change of the sentiment is zero versus the alternative that the expected change is non-zero.
+
+```{r}
+change = diff(consent)
+tsdisplay(change, main = "U of M Consumer Sentiment, first order difference")
+```
+
+We see spikes above the interval at 2, 5, and 12. So we'll choose a lag order of 12 to calculate the test statistic.
+
+We'll further investigate by fitting an autoregressive time series model to the data to see what the automatic order selection turns up:
+
+```{r}
+ar(change, method = "mle")
+```
+
+We observe that the order selected is 5.
+
+```{r}
+adf.test(change, k = 5)
+```
+
+From this we see reject the null hypothesis and posit that the first order difference of consent is a stationary series.
+
+\newpage
+
+## Part D
+
+Focus on the change series. Test the null hypothesis $H_0: \rho_1 = \rho_2 = \ldots \rho_{12} = 0$ versus the alternative $H_a : \rho_i \neq 0 \text{ for some } i \in [1, 12]$. Draw your conclusion.
+
+We first will examine whether the mean of the first order difference series is equal to zero:
+
+```{r}
+t.test(change)
+```
+
+from the p-value of `0.9846` we are not able to reject the null hypothesis, indicating it is highly likley that the true mean is equal to zero.
+
+We will perform a Box-Pierce and Ljung-Box Test to compute a Ljung test statistic for examining the null hypothesis of independence given a time series. This is also known as a `portmanteau` test.
+
+```{r}
+Box.test(change, lag = 12, type = "Ljung")
+```
+
+From the p-value of `0.01965` we must reject $H_0$. This is an indicator that there are some significant serial correlations at the 5% level for the first order difference series. We should have expected as much from consideration of the ACF plot above, when we observed exceedences in 2, 5, and 12. 
+
+\newpage
+
+# Part 2
+
+Again, Consider the change series of consumer sentiment within Problem 1.
+
+## Part A
+
+Use the command `ar` with method `mle` to find the order:
+
+We did this in Part 1, C and found the order to be 5.
+
+## Part B
+
+Build an Auto Regressive model using `ar` based on the selected order for the change series. Perform model checking to validate the fitted model. Write down the model form.
+
+```{r}
+model1 = arima(change, order= c(5,0,0))
+print(model1)
+```
+
+$$y_t = -0.0019 - 0.0499 y_{t-1} - 0.1266 y_{t-2} - 0.083 y_{t-3} -0.0498 y_{t-4} - 0.1107 y_{t-5} +e_t $$
+
+\newpage
+
+```{r}
+tsdiag(model1, gof.lag = 24)
+```
+
+\newpage
+
+## Part C
+
+Does the model imply the existence of business cycles in consumer sentiment? Why?
+
+We will use our model coeffeciants, along with the expression of the characteristic equation to compute the average length of business cycles:
+
+```{r}
+poly1 = c(1, -model1$coef)  # characteristic equation
+roots1 = polyroot(poly1)    # find the zeros of the complex polynomial
+print(roots1)
+print(Mod(roots1))
+```
+
+```{r}
+print(2 * pi / acos(1.073056 / 1.493939))
+```
+
+This indicates implication of a two year business cycle in consumer sentiment.
+
+Calulations were drawn from @tsay2005analysis page 45.
+
+## Part D
+
+Obtain 1-step, to 4-step ahead point and 95% interval forecasts for the change series of consumer sentiment at the forecsat origin of August 1, 2013.
+
+```{r}
+model1_pred = predict(model1, 4)
+print(model1_pred$pred)
+print(model1_pred$se)
+```
+
+```{r}
+model1_pred_lcl = model1_pred$pred - 1.96 * model1_pred$se
+model1_pred_ucl = model1_pred$pred + 1.96 * model1_pred$se
+print(model1_pred_lcl)
+print(model1_pred_ucl)
+```
+
+\newpage
+
+# Part 3
+
+Consider, Again, the monthly change series of consumer sentiment withing Problem 1.
+
+## Part A
+
+Simplify the fitted Auto Regressive model of Problem 2 by removing parameter estimates with a t-ratio less than `1.2` in absolute (use the fixed subcommand).
+
+In looking at <HELP>, we create a mask to remove the paramater estimates with a t-ratio less than `1.2`:
+
+```{r}
+model1.se = sqrt(diag(vcov(model1)))
+model1.tratio = abs(model1$coef/model1.se)
+print(model1.tratio)
+```
+
+From this we see we need to create a mask of `0, NA, NA, 0, NA`.
+
+```{r}
+mask = c(0, NA, NA, 0, NA)
+```
+
+We then use the fixed argument in arima to construct a second model with this mask:
+
+```{r}
+model2 = arima(change, order=c(5,0,0), include.mean = FALSE, transform.pars = FALSE, fixed=mask)
+print(model1)
+print(model2)
+```
+
+\newpage
+
+## Part B
+
+Is the model adequate? Why?
+
+```{r}
+tsdiag(model2, gof.lag = 24)
+```
+
+```{r}
+Box.test(model1$residuals, lag = 24, type = "Ljung")
+```
+
+The Ljung-Box test of the model residuals reveals a p-value that is not significant, we surmise that the model is adequate.
+
+\newpage
+
+## Part C
+
+Compare the simplified model with the Auto Regressive model built in Problem 2. In terms of in-sample fitting, which model is preferred? Why?
+
+```{r}
+accuracy(model1)
+accuracy(model2)
+```
+
+In terms of in sample fitting the RMSE of the first model is lower.
+
+```{r}
+Box.test(model1$residuals, lag = 5, type = "Ljung")
+Box.test(model2$residuals, lag = 3, type = "Ljung")
+```
+
+If both models are adequate, we will then have to choose based on AIC or BIC criteria.
+
+```{r}
+model1$aic
+model2$aic
+```
+
+The second model has slightly lower AIC.
+
+\newpage
+
+## Part D
+
+Does the simplified model imply the existence of business cycles? Why?
+
+We will use our model coeffeciants, along with the expression of the characteristic equation to compute the average length of business cycles:
+
+```{r}
+poly2 = c(1, -model2$coef)  # characteristic equation
+roots2 = polyroot(poly2)    # find the zeros of the complex polynomial
+print(roots2)
+print(Mod(roots2))
+```
+
+```{r}
+print(2 * pi / acos(1.157751 / 1.594751))
+```
+
+This indicates implication of a two year business cycle in consumer sentiment. It shows a 0.12 longer business cycle than the first model.
+
+Calulations were drawn from @tsay2005analysis page 45.
+
+## Part E
+
+Use the backtest to compare the two Auto Regressive models. You may start the forecast origin at `t = 380`. Which model is preferred? Why?
+
+\newpage
+
+# References

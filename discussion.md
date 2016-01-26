@@ -35,7 +35,19 @@ There is ongoing research into using techniques for examining the validity of mo
 
 # Week 2:
 
-# Week 3:
+Missed due to conflicting project rollout.
+
+# Week 3: ARIMA Models -- Fundamental Concepts
+
+## Provided three ACF diagnostic graphs for random numbers of 36, 360, and 1000 size. 1) explain the differences among the figures. Do they all indicate the data are white noise? 2) why are the critical values are different distances from the mean of zero? why are the autocorrelations different in each figure when they each refer to white noise.
+
+_Explain the differences among the figures_: One thing to distinctly note is that as the sample size increase the confidence band decreases. I believe this is the only thing I can confidently say, with measurement, that is changing between the graphs (other than the obvious number and distance of autocorrelations).
+
+_Do they all indicate the data are white noise?_ As there doesn't appear to be an autocorrelation that exceeds the confidence interval at any lag point, it is highly likely that we're observing data that are similar to white noise.
+
+_Why are the critical values different distances from the mean of zero?_: Sample size increase.
+
+_Why are the autocorrelations different in each figure when they each refer to white noise?_: Differences in sample size appear to manifest in differences in the lag. We'd surmise that if the data are white noise the autocorrelations themselves would be random and not show any particular pattern.
 
 # Week 4:
 
