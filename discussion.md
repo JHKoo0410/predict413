@@ -49,7 +49,34 @@ _Why are the critical values different distances from the mean of zero?_: Sample
 
 _Why are the autocorrelations different in each figure when they each refer to white noise?_: Differences in sample size appear to manifest in differences in the lag. We'd surmise that if the data are white noise the autocorrelations themselves would be random and not show any particular pattern.
 
-# Week 4:
+# Week 4: Stationary Univariate ARMA Models
+
+## Use R to simulate and plot some data from simple ARIMA models. Generate data from an AR(1) model with $\phi_1 = 0.6$ and $\sigma^2 = 1$. How does the plot change as you vary $\phi$?
+
+It would be important for us to use the same randomly generated data when we're sampling to create multiple time series objects. Please examine the code below to see how we sample the same generated e for each time series construction:
+
+```
+e = rnorm(100)
+y1 = ts(numeric(100))
+y2 = ts(numeric(100))
+y3 = ts(numeric(100))
+y4 = ts(numeric(100))
+
+for(i in 2:100) {
+    y1[i] = 0.6 * y1[i-1] + e[i]
+    y2[i] = 0.7 * y2[i-1] + e[i]
+    y3[i] = 0.8 * y3[i-1] + e[i]
+    y4[i] = 0.9 * y4[i-1] + e[i]
+}
+autoplot(y1, main = expression(paste(phi, ' = 0.6')))
+autoplot(y2, main = expression(paste(phi, ' = 0.7')))
+autoplot(y3, main = expression(paste(phi, ' = 0.8')))
+autoplot(y4, main = expression(paste(phi, ' = 0.9')))
+```
+
+Did some junk to get the plots in canvas (awful platform).
+
+It appears that as $\phi$ is increased from $[0.6 .. 0.9]$ that the meandering of the graph becomes less stationary. In the graph of 0.6 we see a strong-ish adherence to 0, where as we move to 0.9 we see the meandering go off 0 for longer duration.
 
 # Week 5:
 

@@ -23,10 +23,292 @@ require(fBasics)    # for calculations
 require(fpp)        # for data 
 require(knitr)      # for table output
 require(ggplot2)    # for graphing
+require(ggfortify)  # for graphing time series
 require(ggthemes)   # for graphing beautifully
 require(gridExtra)  # for laying out graphs
 ```
 
-
 # Part 1
+
+Unemployment rate is an important macroeconomic series. Equivalent importance is the duration of unemployment. Consider the mean duration of unemployment in the U.S. from January 1948 to March 2014. The duration is measured in weeks. The data re available from FRED of the Federal Reserve Bank of St. Louis, and also in `m-unempmean.txt`. The data were seasonally adjusted.
+
+```{r}
+d1 = read.table("data/m-unempmean.txt", header=T)
+head(d1)
+```
+
+\newpage
+
+We'll visually examine the daa set to form initial impressions.
+
+```{r}
+t1 = ts(d1$Value, start = 1948, frequency = 12)
+autoplot(t1, main = "Mean Duration of Unemployment", ylab = "Duration", xlab = "Years")
+```
+
+We can see a slightly increasing trend that has indication of seasonality and cyclic characteristics. We also notice the large increase between 2009 and 2014. 
+
+\newpage
+
+We will perform an STL decomposition to investigate our suspicion that this data has a seasonal component.
+
+```{r}
+unemp_stl = stl(t1, s.window="periodic")
+plot(unemp_stl)
+```
+
+We see a seasonal component, which happens to be at a pretty high frequency.
+
+\newpage
+
+## Part A
+
+Does the mean duration series have a unit root? Why?
+
+We will use the Augumented Dickey-Fuller Test, which computes the Augmented Dickey-Fuller test for the null that the time series has a unit root:
+
+```{r}
+adf.test(t1)
+```
+
+Which, due to the p-value of `0.4033` meaning we fail to reject the null hypthothesis. This provides us with strong indication that the timeseries is non-stationary.
+
+```{r}
+tsdisplay(t1, main = "Mean Duration of Unemployment")
+```
+
+It's now obvious from the ACF that we're seeing a non-stationary process because the ACF is decreasing slowly. This leads us to want to examine the first order difference of the time series.
+
+\newpage
+
+## Part B
+
+Focus on the change series of duration (e.g. the first differenced series). Denote the change series by $r_t$ and let $E(r_t) = \mu$. Test $H_0 : \mu = 0$ versus the alternative $H_a : \mu \neq 0$. Draw conclusions.
+
+```{r}
+dt1 = diff(t1)
+tsdisplay(dt1, main = "First Order Difference of Mean Duration of Unemployment")
+```
+
+Well use a different test, the _Kwiatkowski-Phillips-Schmidt-Shin (KPSS) test_, which reverses the hypothesis, so the null-hypothesis is that the data re stationary:
+
+```{r}
+kpss.test(dt1)
+```
+
+Which, due to the p-value of `0.1` meaning we fail to reject the null hypothesis, we conclude from this test that the first order differencing of the time series is as far as we need to go (in terms of number of differencing).
+
+We will also do a conventional t-test, which posits as the $H_0$ that the true mean is equal to zero.
+
+```{r}
+t.test(dt1)
+```
+
+Which, due to the p-value of `0.0992` we fail to reject the null hypothesis.
+
+
+\newpage
+
+## Part C
+
+Build and AR model for the $r_t$ series. Perform model checking using `gof = 24`. Is the model adequate? Why?
+
+```{r}
+m1 = ar(dt1, method = "mle")
+print(m1)
+```
+
+We'll now use the `arima` method to create an AR(12,0,0) model.
+
+```{r}
+m2 = arima(dt1, order = c(12, 0, 0), include.mean = FALSE)
+print(m2)
+```
+
+```{r}
+tsdiag(m2, gof.lag = 24)
+```
+
+An ACF plot of the residuals show all correlations within the threshold limits indicating that the residuals are behaving like white noise.
+
+We will perform a Box-Pierce and Ljung-Box Test to compute a Ljung test statistic for examining the null hypothesis of independence given a time series. This is also known as a `portmanteau` test.
+
+```{r}
+Box.test(m2$residuals, lag = 24, type = "Ljung")
+```
+
+This is testing to see if the residuals of the model look like white noise. The Ljung-Box test of the model residuals reveals a p-value that is not significant, we surmise that the model is adequate.
+
+\newpage
+
+## Part D 
+
+Write down the fitted AR model.
+
+```{r}
+print(m2)
+```
+
+\begin{multline}
+$$y_t = -0.1351y_{t-1}+0.1134y_{t-2}+0.1083y_{t-3}+0.1165y_{t-4}+0.0738y_{t-5}+0.077y_{t-6}
+\\ +0.0903y_{t-7}-0.0609y_{t-8}+0.0687y_{t-9}+0.0609y_{t-10}+0.0228y_{t-11}-0.0723y_{t-12}+e_t$$
+\end{multline}
+
+\newpage
+
+## Part E
+
+Fit a seasonal model for the $r_t$ series using the command: `arima(r, order=(2,0,1), seasonal=list(order=c(1,0,1), period=12), include.mean = F)`. Perform model checking using `gof = 24`. Is the seasonal model adequate? Why?
+
+```{r}
+m3 = arima(dt1, order = c(2, 0, 1), seasonal = list(order = c(1,0,1), period = 12), include.mean = FALSE)
+print(m3)
+```
+
+```{r}
+tsdiag(m3, gof.lag = 24)
+```
+
+An ACF plot of the residuals show all correlations within the threshold limits indicating that the residuals are behaving like white noise.
+
+We will perform a Box-Pierce and Ljung-Box Test to compute a Ljung test statistic for examining the null hypothesis of independence given a time series. This is also known as a `portmanteau` test.
+
+```{r}
+Box.test(m3$residuals, lag = 24, type = "Ljung")
+```
+
+This is testing to see if the residuals of the model look like white noise. The Ljung-Box test of the model residuals reveals a p-value that is not significant, we surmise that the model is adequate.
+
+\newpage
+
+## Part F
+
+Based on the in-sample fitting, which model is preferred? Why?
+
+```{r}
+accuracy(m2)
+accuracy(m3)
+```
+
+The in-sample performance of the m2 (AR(12)) model is better than the m3 (AR(2,0,1) seasonal model.
+
+\newpage
+
+## Part G
+
+Consider out-of-sample predictions. Use `t = 750` as the starting forecast origin. Which model is preferred based on the out-of-sample predictions?
+
+```{r}
+source("backtest.R")
+backtest(m2, dt1, 750, 1, inc.mean = FALSE)
+backtest(m3, dt1, 750, 1, inc.mean = FALSE)
+```
+
+It appears that in in-sample fitting the first model (AR(12)) has a higher RMSE.
+
+# Part 2
+
+Consider the weekly crude oil prices: West Texas Intermediat (WTI), Crushing, Oklahoma. The data are available from FRED of the Federal Reserve Bank of St. Louis, and also in `w-coilwtico.txt`. The sample period is from January 3, 1986 to April 2, 2014.
+
+```{r}
+d2 = read.table("data/w-coilwtico.txt", header=T)
+head(d2)
+```
+
+\newpage
+
+We'll visually examine the daa set to form initial impressions.
+
+```{r}
+t2 = ts(d2$Value, start = 1986, frequency = 52)
+autoplot(t2, main = "Weekly Crue Oil Prices", ylab = "Value", xlab = "Years")
+```
+
+We can see a slightly increasing trend that has indication of seasonality and cyclic characteristics. We also notice the large increase between 2009 and 2014. 
+
+\newpage
+
+We will perform an STL decomposition to investigate our suspicion that this data has a seasonal component.
+
+```{r}
+oil_stl = stl(t2, s.window="periodic")
+plot(oil_stl)
+```
+
+We see a seasonal component. We also notice an interesting remainder in the time of high volatility.
+
+## Part A
+
+Let $r_t$ be the growth series (e.g. the first difference of log oil proces). Is there a serial correlation in the $r_t$ series?
+
+```{r}
+ldt2 = diff(log(t2))
+```
+
+We will perform a Box-Pierce and Ljung-Box Test to compute a Ljung test statistic for examining the null hypothesis of independence given a time series. This is also known as a `portmanteau` test.
+
+```{r}
+Box.test(ldt2, type = "Ljung")
+```
+
+From the p-value of `0.0001753` we must reject $H_0$. This is an indicator that there are some significant serial correlations at the 5% level for the first order difference series.
+
+\newpage
+
+## Part B
+
+Build an AR model for $r_t$. Check the adequacy of the model, and write down the model.
+
+```{r}
+m4 = ar(ldt2, type="mle")
+m5 = arima(ldt2, order=c(16, 0, 0))
+print(m5)
+```
+
+\begin{multline}
+$$y_t = 0.1067y_{t-1}-0.0485y_{t-2}+0.1098y_{t-3}+0.0353y_{t-4}
+\\-0.0227y_{t-5}-0.0228_{t-6}-0.0307y_{t-7}+0.0993y_{t-8}
+\\-0.0047y_{t-9}+0.0229y_{t-10}-0.0975y_{t-11}+0.0233y_{t-12}
+\\+0.0011y_{t-13}+0.0625y_{t-14}-0.0266y_{t-15}-0.0571y_{t-16}+e_t$$
+\end{multline}
+
+```{r}
+tsdiag(m5)
+```
+
+An ACF plot of the residuals show all correlations within the threshold limits indicating that the residuals are behaving like white noise.
+
+We will perform a Box-Pierce and Ljung-Box Test to compute a Ljung test statistic for examining the null hypothesis of independence given a time series. This is also known as a `portmanteau` test.
+
+```{r}
+Box.test(m5$residuals, type = "Ljung")
+```
+
+This is testing to see if the residuals of the model look like white noise. The Ljung-Box test of the model residuals reveals a p-value that is not significant, we surmise that the model is adequate.
+
+\newpage
+
+## Part C
+
+Fit another model to $r_t$ using the following command: `arima(r, order=c(3,0,2), include.mean = F)` This is an ARIMA(3,0,2) model, write down the model. Based on in-sample fitting, which model is preferred?
+
+```{r}
+m6 = arima(ldt2, order=c(3, 0, 2), include.mean = FALSE)
+print(m6)
+```
+
+$$y_t = 0.5664y_{t-1}-0.8548y_{t-2}+0.1689y_{t-3}+e_t-0.4680e_{t-1}+0.7753e_{t-2}$$
+
+
+```{r}
+tsdiag(m6)
+```
+
+```{r}
+accuracy(m5)
+accuracy(m6)
+```
+
+It appears that the m6 model (AR(3,0,2)) has better accuracy than our MLE found AR(16) model.
+
 
