@@ -199,7 +199,7 @@ The in-sample performance of the m2 (AR(12)) model is better than the m3 (AR(2,0
 Consider out-of-sample predictions. Use `t = 750` as the starting forecast origin. Which model is preferred based on the out-of-sample predictions?
 
 ```{r}
-source("backtest.R")
+source('../../Reference/backtest.R')
 backtest(m2, dt1, 750, 1, inc.mean = FALSE)
 backtest(m3, dt1, 750, 1, inc.mean = FALSE)
 ```
@@ -309,6 +309,6 @@ accuracy(m5)
 accuracy(m6)
 ```
 
-It appears that the m6 model (AR(3,0,2)) has better accuracy than our MLE found AR(16) model.
+It appears that M5 AR(16) has lower error than M6.
 
 

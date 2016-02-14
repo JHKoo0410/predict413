@@ -80,6 +80,19 @@ It appears that as $\phi$ is increased from $[0.6 .. 0.9]$ that the meandering o
 
 # Week 5:
 
+## Briefly Describe what is meant by strict stationarity for a time series, and weak stationarity of order $f$ for a time series. Briefly describe the most common approaches to address nonstationarity in a time series caused by variation in the mean, and nonstationarity in a time series caused by variations in the variance.
+
+Strict stationarity in a time series indicates that the mean and variance remain constant over the time series regardless of shift. Another way to think about strict stationarity is a time series where there exists no trend, seasonality, or cycles. The strict stationarity is akin to white noise.
+
+Weak stationarity, of order $f$, means that the first $f$ moments [0] are time invariant. As others have noted, order $f = 2$ would indicate that the first two moments (mean and variance) are time invariant.
+
+The most common approach in addressing nonstationarity caused by variation in the mean is to take the difference of the time series. The most common approach in addressing nonstationarity caused by variation in the variance is to perform a transform of the time series, such as logorithmic transformation.
+
+[0]: Moment (mathematics). (2016, January 15). In Wikipedia, The Free Encyclopedia. Retrieved 01:29, February 9, 2016, from https://en.wikipedia.org/w/index.php?title=Moment_(mathematics)&oldid=700008364
+
+
+
+
 # Week 6:
 
 # Week 7:

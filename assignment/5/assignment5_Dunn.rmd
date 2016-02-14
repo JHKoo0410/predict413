@@ -23,10 +23,443 @@ require(fBasics)    # for calculations
 require(fpp)        # for data 
 require(knitr)      # for table output
 require(ggplot2)    # for graphing
+require(ggfortify)  # for graphing time series
 require(ggthemes)   # for graphing beautifully
 require(gridExtra)  # for laying out graphs
 ```
 
 
 # Part 1
+
+Consider the monthly returns of Fama-French factors from January 1961 to November 2013. The data are in the file `m-FamaFrench.txt`. Focus on the simple returns of the factor hml.
+
+```{r}
+d1 = read.table("data/m-FamaFrench.txt", header=T)
+head(d1)
+```
+
+\newpage
+
+```{r}
+t1 = ts(d1$hml, start = 1961, frequency = 12)
+autoplot(t1, main = "Simple Monthly Returns 'hml' of Fama French", ylab = "Simple Returns", xlab = "Years")
+```
+
+\newpage
+
+```{r}
+t1_stl = stl(t1, s.window="periodic")
+autoplot(t1_stl, main = "STL Decomposition of Simple Monthly Returns of Fama French")
+```
+
+\newpage
+
+```{r}
+t1_acf = acf(t1, plot = FALSE)
+autoplot(t1_acf, main = "ACF of Simple monthly Returns of Fama French")
+```
+
+## Part A
+
+Build a time series model for the mean equation of the hml factor. Write down the fitted model.
+
+```{r}
+m1 = arima(t1, order = c(0, 0, 1))
+print(m1)
+```
+
+$$ y_t = 0.004 + 0.1536a_{t-1}$$
+
+\newpage
+
+## Part B
+
+Is the model adequate? Why?
+
+```{r}
+ggtsdiag(m1)
+```
+
+The model appears adequate since all Ljung-Box p-values are > 0.05
+
+\newpage
+
+## Part C
+
+Obtain 1-step and 2-step ahead point and 95% intervalforecasts for the hml factor at the forecast origin Novemer 2013 (Last data point)
+
+```{r}
+pm1 = predict(m1, 2)
+print(pm1)
+```
+
+```{r}
+pm1_lcl = pm1$pred - 1.96 * pm1$se
+pm1_ucl = pm1$pred + 1.96 * pm1$se
+print(pm1_lcl)
+print(pm1_ucl)
+```
+
+\newpage
+
+# Part 2
+
+Condiser the monthly market liquidity measure of Professors Pastors and Stambaugh. The data are available from Wharton WRDS and are in the file `m-PastorStambaugh.txt`. Focus on the variable PS level and denote the series by $x_t$.
+
+```{r}
+d2 = read.table("data/m-PastorStambaugh.txt", header=T)
+head(d2)
+```
+
+\newpage
+
+```{r}
+t2 = ts(d2$PS_LEVEL, start = c(1962, 8), frequency = 12)
+autoplot(t2, main = "Monthly Market Liquidity of Professors, Pastors, and Stambaugh", ylab = "Monthly Market Liquidity", xlab = "Years")
+```
+
+\newpage
+
+```{r}
+t2_stl = stl(t2, s.window="periodic")
+autoplot(t2_stl, main = "STL Decomposition of Monthly Market Liquidity of Professors, Pastors, and Stambaugh")
+```
+
+\newpage
+
+```{r}
+t2_acf = acf(t2, plot = FALSE)
+autoplot(t2_acf, main = "ACF of Monthly Market Liquidity of Professors, Pastors, and Stambaugh")
+```
+
+\newpage
+
+## Part A
+
+Build a time series model for the mean equation. Write down the fitted model.
+
+```{r}
+m2 = arima(t2, order = c(5,0,0))
+print(m2)
+```
+
+$$y_t = -0.0306 +0.0624y_{t-1}+0.1858y_{t-2}+0.1313y_{t-3}+0.0105y_{t-4}+0.1096y_{t-5}+e_t$$
+
+\newpage
+
+## Part B
+
+Is the model adequate? Why?
+
+```{r}
+ggtsdiag(m2)
+```
+
+\newpage
+
+## Part C
+
+Identify the largest outlier in the series. Refine the fitted model by using an indicator for the outlier. Write down the refined model.
+
+```{r}
+m2oi = which.min(m2$residuals)
+d2$outlier = 0
+d2$outlier[m2oi] = 1
+m3 = arima(d2$PS_LEVEL, order = c(5,0,0), xreg = d2$outlier)
+```
+
+$$y_t = -0.0299 +0.0657y_{t-1}+0.1884y_{t-2}+0.1309y_{t-3}+0.0162y_{t-4}+0.1261y_{t-5}-0.4255_{\text{outlier}}+e_t$$
+
+```{r}
+ggtsdiag(m3)
+```
+
+\newpage
+
+## Part D
+
+Further refine the model by fixing the least significant parameter to zero. Write down the revised model.
+
+```{r}
+m3.se = sqrt(diag(vcov(m3)))
+m3.tratio = abs(m3$coef/m3.se)
+print(m3.tratio)
+```
+
+From the above, the AR parameter is not significant (t < 1) and the smallest of all the parameters. The outlier parameter is the most important.
+
+From this we see we need to create a mask of `0, NA, NA, 0, NA`.
+
+```{r}
+m4_mask = c(NA, NA, NA, 0, NA, NA, NA)
+```
+
+```{r}
+m4 = arima(d2$PS_LEVEL, order = c(5,0,0), xreg = d2$outlier, fixed = m4_mask)
+print(m4)
+```
+
+$$y_t = -0.0299 +0.0683y_{t-1}+0.1917y_{t-2}+0.1318y_{t-3}+0.1272y_{t-5}-0.4248_{\text{outlier}}+e_t$$
+
+```{r}
+ggtsdiag(m4)
+```
+
+\newpage
+
+# Part 3
+
+Consider the quarterly earnings per share of Microsoft from the second quarter of 1986 to the third quarter of 2013. The original data were from IBES, but contain four missing values in 2002 and 2003. The data are in the file `q-earn-msft.txt`. Other sources are used to fill in the missing values. Focus on the log earnings per share.
+
+```{r}
+d3 = read.table("data/q-earn-msft.txt", header=T)
+head(d3)
+```
+
+\newpage
+
+```{r}
+t3 = ts(d3$value, start = c(1986, 2), frequency = 4)
+autoplot(t3, main = "Quarterly earnings per share of Microsoft", ylab = "Quarterly Earnings per share", xlab = "Years")
+```
+
+\newpage
+
+```{r}
+t3_stl = stl(t3, s.window="periodic")
+autoplot(t3_stl, main = "STL Decomposition of Quarterly Earnings per share of Microsoft")
+```
+
+\newpage
+
+```{r}
+t3_acf = acf(t3, plot = FALSE)
+autoplot(t3_acf, main = "ACF of Quarterly Earnings per share of Microsoft")
+```
+
+\newpage
+
+We'll create another time series of the log transform:
+
+```{r}
+t4 = ts(log(d3$value), start = c(1986, 2), frequency = 4)
+autoplot(t4, main = "Log Quarterly earnings per share of Microsoft", ylab = "Quarterly Earnings per share", xlab = "Years")
+```
+
+\newpage
+
+```{r}
+t4_acf = acf(t4, plot = FALSE)
+autoplot(t4_acf, main = "ACF of Log Quarterly Earnings per share of Microsoft")
+```
+
+\newpage
+
+## Part A
+
+Build a time series model for the log earnings series. Perform model checking and write down the fitted model.
+
+```{r}
+m5 = arima(t4, order = c(0,1,1), seasonal = list(order=c(0,1,1), period=4))
+print(m5)
+```
+
+$$(1 - B)(1 - B^4)y_t = (1 - 0.4826)(1 - 0.7149^4)a_t$$
+
+\newpage
+
+## Part B
+
+Fit the following model to the log earnings series: `arima(xt, order = c(0,1,1), seasonal = list(order = c(0,0,1), period = 4))`, Where xt denotes the log earnings series. Write down the fitted model.
+
+```{r}
+m6 = arima(t4, order = c(0,1,1), seasonal = list(order=c(0,0,1), period=4))
+print(m6)
+```
+
+$$(1 - B)(1 - B^4)y_t = (1 - 0.2723)(1 - 0.3894^4)a_t$$
+
+\newpage
+
+## Part C 
+
+Compare the two time series models. Which model is preferred in terms of fitting? Why?
+
+Model m5 has a lower AIC.
+
+## Part D
+
+Use the backtest procedure to compare the two models via 1-step ahead forecasts. You may use $t = 81$ as the starting forecast origin. Which model is preferred? Why?
+
+```{r}
+source('backtest.R')
+backtest(m5, t4, 81, h=1, inc.mean=F)
+backtest(m6, t4, 81, h=1, inc.mean=F)
+```
+
+Model m5 is preferred because it has a lower RMSE. This model doesn't have any seasonal differencing. 
+
+\newpage
+
+# Part 4
+
+Consider the monthly Fama-Bliss bond yields with maturities 1 and 3 years. The data are available from CRSP and in the file `m-FamaBlissdbndyields.txt`. Denote the yields by $y_{1t}$ and $y_{3t}$, respectively. The goal here is to explore the dependence of the 3-year yield on the 1-year yield.
+
+```{r}
+d4 = read.table("data/m-FamaBlissdbndyields.txt", header=T)
+head(d4)
+```
+
+\newpage
+
+```{r}
+t5 = ts(d4$yield1, start = c(1961), frequency = 12)
+t6 = ts(d4$yield3, start = c(1961), frequency = 12)
+autoplot(t5, main = "Fama-Bliss Bond Yeilds, 1 Year Maturity", ylab = "Bond Yields", xlab = "Years")
+autoplot(t6, main = "Fama-Bliss Bond Yeilds, 3 Year Maturity", ylab = "Bond Yields", xlab = "Years")
+```
+
+\newpage
+
+## Part A
+
+Fit the linear regression model $y_{3t} = \alpha + \beta y_{1t} + e_t$. Write down the fitted model. What is the $R^2$? Is the model adequate? Why?
+
+```{r}
+m7 = lm(t6~t5)
+summary(m7)
+```
+
+$$t_{3t} = 0.7126 + 0.9408y_{1t}+e_t$$
+
+The $R^2$ of the model is 0.9691. 
+
+```{r}
+m7_acf = acf(m7$residuals, plot = FALSE)
+autoplot(m7_acf, main = "ACF of Model 7 Residuals")
+```
+
+There appears to be a number of significant lags, the model does not appear to be adequate (exhibits serial autocorrelation)
+
+\newpage
+
+## Part B
+
+Let $d_{1t} = (1-B)y_{1t}$ and $d_{2t} = (1-B)y_{3t}$, where B is the back-shift operator. Here it denotes the change in monthly bond yields. Consider the linear regression $d_{3t} = \beta d_{1t} + e_t$. Write down the fitted model. What is the $R^2$? Justify that it is appropriate to taking the first difference of the bond yields.
+
+```{r}
+d1t = diff(t5)
+d3t = diff(t6)
+
+m8 = lm(d3t~1 + d1t)
+summary(m8)
+```
+
+$$t_{d3t} = -0.001 + 0.7359y_{d1t}+e_t$$
+
+The $R^2$ of the model is 0.7963.
+
+```{r}
+m8_acf = acf(m8$residuals, plot = FALSE)
+autoplot(m8_acf, main = "ACF of Model 8 Residuals")
+m8_pacf = pacf(m8$residuals, plot = FALSE)
+autoplot(m8_pacf, main = "PACF of Model 8 Residuals")
+```
+
+Although the $R^2$ value is less in model 8, taking the difference of the time series is justified as it reduces the serial autocorrelation and produces a more accurate model.
+
+\newpage
+
+## Part C
+
+Is the model accurate? If not, refine the model and write down the refined model.
+
+The model is not accurate due to significant lags at 1 and 5 (seen in the PACF).
+
+\newpage
+
+## Part D 
+
+Based on the refined model, describe the linear dependence between the bond yields.
+
+The 3-year bond yield at time t can be found by taking previous period 3-year bond yield and adding 73.6% of the change in the 1-year bond yield.
+
+\newpage
+
+# Part 5
+
+Consider again the bond yields of Problem 4. Suppose that one is concerned with taking the first difference. To mitigate the concern, one can perform the analyses below;
+
+\newpage
+
+## Part A
+
+Fit an AR(6) model to $y_{3t}$ using $y_{1t}$ as an explanatory variable. Write down the fitted model. You should include the intercept term in the model as the original data are used.
+
+```{r}
+m9 = arima(t6, order=c(6,0,0), xreg = t5)
+print(m9)
+```
+
+$$(1 - 0.8744B - 0.0329B^2 - 0.1175B^3 + 0.1243B^4 + 0.0635B^5 - 0.1457B^6 )(y_{3t} - 1.6424 - 0.7469y_{1t}) = a_t$$
+
+```{r}
+ggtsdiag(m9, gof.lag = 24)
+```
+
+\newpage
+
+## Part B
+
+Refine the model by letting the insignificant coefficients of lags 2 and 5 to zero. Write down the fitted model.
+
+```{r}
+mask2 = c(NA,0,NA,NA,0,NA,NA,NA)
+m10 = arima(t6, order = c(6,0,0), xreg = t5, fixed = mask2)
+print(m10)
+```
+
+$$(1 - 0.8904B - 0.1332B^3 + 0.1553B^4 - 0.1142B^6 )(y_{3t} - 1.6336 - 0.7486y_{1t}) = a_t$$
+
+\newpage
+
+## Part C
+
+Is the refined model adequate? Why?
+
+```{r}
+ggtsdiag(m10, gof.lag = 24)
+```
+
+The model appears adequate since all Ljung-Box p-values are > 0.05
+
+\newpage
+
+## Part D
+
+Use the command polyroot in R to find the solutions of the characteristic equation of the refined AR(6) model. How many real solutions are there?
+
+```{r}
+p1 = c(1, -m10$coef[1:6])
+s1 = polyroot(p1)
+print(s1)
+```
+
+There are 2 real solutions (1.012815 and -1.923688)
+
+\newpage
+
+## Part E
+
+Compute the inverse of the absolute values of the solutions of the characteristic equation. Write down the maximum value of the inverses. The maximum should be close to 1, implying that the AR(6) model likely contains a unit root.
+
+```{r}
+Mod(s1)
+```
+
+```{r}
+1 / Mod(s1)
+```
+
+This verified the maximum (0.9873) is close to 1 so the model likely contains a unit root.
 

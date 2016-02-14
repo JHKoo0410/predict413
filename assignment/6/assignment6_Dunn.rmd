@@ -23,6 +23,7 @@ require(fBasics)    # for calculations
 require(fpp)        # for data 
 require(knitr)      # for table output
 require(ggplot2)    # for graphing
+require(ggfortify)  # for graphing time series
 require(ggthemes)   # for graphing beautifully
 require(gridExtra)  # for laying out graphs
 ```
